@@ -1,0 +1,50 @@
+# 定义 Workflow 的名字
+name: Release
+
+# git add . && git commit -m "message" && git tag v0.1.4 && git push -u origin master --tags
+on:
+  push:
+    branches: [ master ]
+    tags:
+      - 'v*.*.*'
+
+# 定义 Workflow 的 job
+jobs:
+  # 定义 job 的 id
+  build:
+    # 定义 job 的 name
+    name: build
+    # 定义 job 的运行环境
+    runs-on: ubuntu-latest
+    # 定义 job 的运行步骤
+    steps:
+      # 拉代码
+      - uses: actions/checkout@v2
+      # check env
+      - run: |
+          printenv
+          echo ${{ github.ref }}
+          ls -al
+
+      - name: Get version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
+      - name: 读取描述文件
+        id: description
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: ./description.md
+
+      - name: 创建GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1 # https://github.com/marketplace/actions/gh-release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }} # 此次发布标签的名字
+          name: Release ${{ steps.get_version.outputs.VERSION }} # 发布的名称
+          body: ${{steps.description.outputs.content}} # 发布内容的文本描述
+          draft: false # 是否创建为草稿 true:创建为草稿  ,false 直接发布默认false.
+          prerelease: false # 是否设置为预发布, ture或false, 默认为false
