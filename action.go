@@ -13,18 +13,18 @@ type (
 	// EventObserver is the interface.When the event is processed,
 	//  it can notify the observers asynchronously and execute their own business.
 	EventObserver interface {
-		Receive(oldState, newState State, eventName EventName, data any, err error)
+		Receive(oldState, newState State, eventName EventName, param *Param, err error)
 	}
 
 	ActionOpt func(action *Action)
 )
 
-func (action *Action) run(data any) (State, error) {
-	state, err := action.fn(data)
+func (action *Action) run(param *Param) (State, error) {
+	state, err := action.fn(param)
 	runner := NewTaskRunner(action.drainWorkers)
 	for _, observer := range action.observers {
 		runner.Schedule(func() {
-			observer.Receive(action.fsm.state, state, action.eventName, data, err)
+			observer.Receive(action.fsm.state, state, action.eventName, param, err)
 		})
 	}
 	return state, err

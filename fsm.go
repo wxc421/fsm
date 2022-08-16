@@ -50,7 +50,7 @@ func (fsm *FSM) RegisterStateMachine(state State, eventName EventName, fn EventF
 }
 
 // Call the state's event func
-func (fsm *FSM) Call(eventName EventName) (State, error) {
+func (fsm *FSM) Call(eventName EventName, opts ...ParamOption) (State, error) {
 	events, ok := fsm.stateMachineMap[fsm.state]
 	if !ok || events == nil {
 		return fsm.state, errors.New("can't find ")
@@ -62,11 +62,39 @@ func (fsm *FSM) Call(eventName EventName) (State, error) {
 	}
 
 	// call eventName func
-	state, err := action.run(nil)
+	param := &Param{}
+	for _, fn := range opts {
+		fn(param)
+	}
+	state, err := action.run(param)
 	if err != nil {
 		return fsm.state, err
 	}
 	// update state
 	fsm.state = state
+	return fsm.state, nil
+}
+
+// AutoCall the state's event func multipart
+func (fsm *FSM) AutoCall(eventNames ...EventName) (State, error) {
+	for _, eventName := range eventNames {
+		events, ok := fsm.stateMachineMap[fsm.state]
+		if !ok || events == nil {
+			return fsm.state, errors.New("can't find ")
+		}
+
+		action, ok := events[eventName]
+		if !ok || action == nil {
+			return fsm.state, errors.New("can't find ")
+		}
+
+		// call eventName func
+		state, err := action.run(nil)
+		if err != nil {
+			return fsm.state, err
+		}
+		// update state
+		fsm.state = state
+	}
 	return fsm.state, nil
 }
